@@ -56,11 +56,10 @@ function HUDChat:key_press(o, k)
 			text:replace_text("")
 		end
 	elseif k == Idstring("left") then
-	    managers.mission._fading_debug_output:script().log('left',  Color.green)
 		if s < e then
 			text:set_selection(s, s)
 		elseif s > 0 then
-			text:set_selection(s - 2, s - 2)
+			text:set_selection(s - 1, s - 1)
 		end
 	elseif k == Idstring("right") then
 		if s < e then
