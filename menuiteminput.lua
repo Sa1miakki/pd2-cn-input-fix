@@ -1,73 +1,12 @@
 inputstr = 1
+local orig_key_press = MenuItemInput.key_press
+
 function MenuItemInput:key_press(row_item, o, k)
-	if not row_item or not alive(row_item.gui_text) or not self._editing then
-		return
+    if ( k == Idstring("backspace") or k == Idstring("left") or k == Idstring("right") ) and self._now_inputing then
+	    --Nothing
+	else
+	    orig_key_press(self, row_item, o, k)
 	end
-
-	local text = row_item.gui_text
-	local s, e = text:selection()
-	local n = utf8.len(text:text())
-	local d = math.abs(e - s)
-	self._key_pressed = k
-
-	text:stop()
-	text:animate(callback(self, self, "update_key_down", row_item), k)
-
-	if k == Idstring("backspace") and not self._now_inputing then
-		if s == e and s > 0 then
-			text:set_selection(s - 1, e)
-		end
-
-		text:replace_text("")
-
-		if utf8.len(text:text()) < 1 and type(self._esc_released_callback) ~= "number" then
-			-- Nothing
-		end
-	elseif k == Idstring("delete") then
-		if s == e and s < n then
-			text:set_selection(s, e + 1)
-		end
-
-		text:replace_text("")
-
-		if utf8.len(text:text()) < 1 and type(self._esc_released_callback) ~= "number" then
-			-- Nothing
-		end
-	elseif k == Idstring("insert") then
-		local clipboard = Application:get_clipboard() or ""
-
-		text:replace_text(clipboard)
-
-		local lbs = text:line_breaks()
-
-		if #lbs > 1 then
-			local s = lbs[2]
-			local e = utf8.len(text:text())
-
-			text:set_selection(s, e)
-			text:replace_text("")
-		end
-	elseif k == Idstring("left") then
-		if s < e then
-			text:set_selection(s, s)
-		elseif s > 0 then
-			text:set_selection(s - 1, s - 1)
-		end
-	elseif k == Idstring("right") then
-		if s < e then
-			text:set_selection(e, e)
-		elseif s < n then
-			text:set_selection(s + 1, s + 1)
-		end
-	elseif self._key_pressed == Idstring("end") then
-		text:set_selection(n, n)
-	elseif self._key_pressed == Idstring("home") then
-		text:set_selection(0, 0)
-	elseif k == Idstring("enter") then
-		self._should_disable = true
-	end
-
-	self:_layout(row_item)
 end
 
 Hooks:PreHook(MenuItemInput, "update_key_down", "mii_update_key_down_cn_backspace", function(self, row_item, o, k, ...)
@@ -84,7 +23,7 @@ Hooks:PreHook(MenuItemInput, "update_key_down", "mii_update_key_down_cn_backspac
         end
     end
 	
-	wait(0.001) --因为按下按键是最先执行的，所以直接将它延后0.001s
+	wait(0.001) 
 	
 	if match and inputstr == 0 then
 		self._now_inputing = true
@@ -97,7 +36,33 @@ Hooks:PreHook(MenuItemInput, "enter_text", "mii_enter_text_cn_backspace", functi
 	end
     if s then inputstr = tostring(#s) else inputstr = 1 end
 	self._now_inputing = false
+	if s and tostring(#s) % 3 == 0 then
+	    local ns, ne = row_item.gui_text:selection()
+		if ns > 0 then
+	        self._inputing_past = true
+        else
+		    self._inputing_past = false
+		end
+		self._cnlen_fix = math.min(utf8.len(row_item.gui_text:text()) - ns, tonumber(#s) * 2 / 3) --和后面还剩下的字符个数比较一下
+	end
 end) 
+
+Hooks:PostHook(MenuItemInput, "enter_text", "mii_enter_text_cn_insert", function(self, row_item, o, s, ...)
+    if not row_item or not alive(row_item.gui_text) or not self._editing then
+		return
+	end
+    if s then inputstr = tostring(#s) else inputstr = 1 end
+	self._now_inputing = false
+	if s and self._inputing_past and tostring(#s) % 3 == 0 then
+	    local ns, ne = row_item.gui_text:selection()
+		if self._inputing_past then
+	        row_item.gui_text:set_selection(ns - self._cnlen_fix , ne - self._cnlen_fix)
+            --self:handle_key(row_item, o, k)
+	        self:_layout(row_item)	
+        end
+	end
+end)
+
 
 Hooks:PreHook(MenuItemInput, "key_release", "mii_key_release_cn_backspace", function(self, row_item, o, k, ...)
     if not row_item or not alive(row_item.gui_text) then

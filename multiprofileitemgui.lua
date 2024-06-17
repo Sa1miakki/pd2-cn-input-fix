@@ -1,45 +1,12 @@
 inputstr = 1
-function MultiProfileItemGui:handle_key(k, pressed) 
-	local text = self._name_text
-	local s, e = text:selection()
-	local n = utf8.len(text:text())
-	local d = math.abs(e - s)
 
-	if pressed then
-		if k == Idstring("backspace") and not self._now_inputing then
-			if s == e and s > 0 then
-				text:set_selection(s - 1, e)
-			end
+local orig_handle_key = MultiProfileItemGui.handle_key
 
-			text:replace_text("")
-		elseif k == Idstring("delete") then
-			if s == e and s < n then
-				text:set_selection(s, e + 1)
-			end
-
-			text:replace_text("")
-		elseif k == Idstring("left") then
-			if s < e then
-				text:set_selection(s, s)
-			elseif s > 0 then
-				text:set_selection(s - 1, s - 1)
-			end
-		elseif k == Idstring("right") then
-			if s < e then
-				text:set_selection(e, e)
-			elseif s < n then
-				text:set_selection(s + 1, s + 1)
-			end
-		elseif k == Idstring("home") then
-			text:set_selection(0, 0)
-		elseif k == Idstring("end") then
-			text:set_selection(n, n)
-		end
-	elseif k == Idstring("enter") then
-		self:trigger()
-	elseif k == Idstring("esc") then
-		text:set_text(managers.multi_profile:current_profile_name())
-		self:set_editing(false)
+function MultiProfileItemGui:handle_key(k, pressed)
+    if ( k == Idstring("backspace") or k == Idstring("left") or k == Idstring("right") ) and self._now_inputing then
+	    --Nothing
+	else
+	    orig_handle_key(self, k, pressed)
 	end
 end
 
@@ -52,7 +19,7 @@ Hooks:PreHook(MultiProfileItemGui, "update_key_down", "mpig_update_key_down_cn_b
         end
     end
 	
-	wait(0.001) --因为按下按键是最先执行的，所以直接将它延后0.001s
+	wait(0.001) 
 	
 	if match and inputstr == 0 then
 		self._now_inputing = true
@@ -62,6 +29,25 @@ end)
 Hooks:PreHook(MultiProfileItemGui, "enter_text", "mpig_enter_text_cn_backspace", function(self, o, s, ...)
     if s then inputstr = tostring(#s) else inputstr = 1 end
 	self._now_inputing = false
+	if s and tostring(#s) % 3 == 0 then
+	    local ns, ne = self._name_text:selection()
+		if ns > 0 then
+	        self._inputing_past = true
+        else
+		    self._inputing_past = false
+		end
+		self._cnlen_fix = math.min(utf8.len(self._name_text:text()) - ns, tonumber(#s) * 2 / 3) --和后面还剩下的字符个数比较一下
+	end
+end) 
+
+Hooks:PostHook(MultiProfileItemGui, "enter_text", "mpig_enter_text_cn_insert", function(self, o, s, ...)
+    if s and self._inputing_past and tostring(#s) % 3 == 0 then
+	    local ns, ne = self._name_text:selection()
+		if self._inputing_past then
+	        self._name_text:set_selection(ns - self._cnlen_fix , ne - self._cnlen_fix)
+            self:_update_caret()	
+        end
+	end
 end) 
 
 Hooks:PreHook(MultiProfileItemGui, "key_release", "mpig_key_release_cn_backspace", function(self, o, k, ...)

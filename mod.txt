@@ -2,9 +2,17 @@
 	"name" : "中文输入优化",
 	"description" : "让你更随心所欲地按下退格键",
 	"author" : "Sa1miakki",
-	"version" : "1",
-        "priority" : 1,
+	"version" : "1.0",
+        "priority" : -999,
 	"blt_version" : 2,
+          "updates" : [
+		{
+			"identifier" : "pd2_cninputfix",
+			"host" : {
+				"meta" : "https://raw.githubusercontent.com/Sa1miakki/pd2-cn-input-fix/main/meta.json"
+			}
+		}
+	],
 	"hooks" : [
 		{"hook_id" : "lib/managers/hud/hudchat", "script_path": "hudchat.lua"},
                 {"hook_id" : "lib/managers/chatmanager", "script_path": "chatmanager.lua"},
